@@ -4,6 +4,7 @@
  * 3. show/hide toggles (Publications)
  * 4. spam-safe mail link
  * 5. Activities category filter
+ * 6. Publications search
  */
 (function () {
   'use strict';
@@ -185,12 +186,84 @@
     apply(known[h] ? h : 'all', false);
   }
 
+  // ---- 6. Publications search ----------------------------------------------
+  function initSearch() {
+    var input = document.querySelector('input[type="search"]');
+    var sections = document.querySelectorAll('#papers, #masters, #bachelors');
+    if (!input || !sections.length) return;
+
+    var st = document.createElement('style');
+    st.textContent = '.js-hide{display:none !important}';
+    document.head.appendChild(st);
+
+    var status = document.createElement('p');
+    status.setAttribute('aria-live', 'polite');
+    status.style.cssText = 'margin:10px 0 0;font-size:12px;color:#5E5E5E;min-height:18px';
+    input.parentNode.appendChild(status);
+
+    function norm(t) { return (t || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim(); }
+
+    // collect searchable items once
+    var data = [];
+    sections.forEach(function (sec) {
+      var items = [];
+      sec.querySelectorAll('details').forEach(function (d) {
+        var entries = d.querySelectorAll(':scope > div, :scope > ul > li');
+        var countEl = d.querySelectorAll(':scope > summary > span')[2];
+        var rec = { d: d, open0: d.open, count0: countEl ? countEl.textContent : '', countEl: countEl, entries: [] };
+        entries.forEach(function (e) { rec.entries.push({ el: e, text: norm(e.textContent) }); });
+        items.push(rec);
+      });
+      var holders = sec.querySelectorAll('[id^="more"]');
+      var h = [];
+      holders.forEach(function (x) { h.push({ el: x, hidden0: x.hidden }); });
+      data.push({ sec: sec, years: items, holders: h });
+    });
+
+    function run() {
+      var q = norm(input.value);
+      var total = 0;
+      data.forEach(function (S) {
+        var secCount = 0;
+        S.years.forEach(function (Y) {
+          var n = 0;
+          Y.entries.forEach(function (E) {
+            var show = !q || E.text.indexOf(q) !== -1;
+            E.el.classList.toggle('js-hide', !show);
+            if (show) n++;
+          });
+          Y.d.classList.toggle('js-hide', !!q && n === 0);
+          if (q) { Y.d.open = n > 0; if (Y.countEl) Y.countEl.textContent = String(n); }
+          else { Y.d.open = Y.open0; if (Y.countEl) Y.countEl.textContent = Y.count0; }
+          secCount += n;
+        });
+        S.holders.forEach(function (H) { H.el.hidden = q ? false : H.hidden0; });
+        S.sec.classList.toggle('js-hide', !!q && secCount === 0);
+        total += secCount;
+      });
+      status.textContent = q ? (total ? total + ' 件 / ' + total + (total === 1 ? ' result' : ' results') : '該当なし / No results') : '';
+    }
+
+    // remember a user's own open/close of years while not searching
+    document.addEventListener('toggle', function (e) {
+      if (e.target && e.target.tagName === 'DETAILS' && !norm(input.value)) {
+        data.forEach(function (S) { S.years.forEach(function (Y) { if (Y.d === e.target) Y.open0 = Y.d.open; }); });
+      }
+    }, true);
+    // keep the toggle buttons ("earlier years") from fighting an active search
+    var t = null;
+    input.addEventListener('input', function () { clearTimeout(t); t = setTimeout(run, 120); });
+    input.addEventListener('search', run);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { input.value = ''; run(); } });
+  }
+
   function init() {
     initCurve();
     initMenu();
     initToggles();
     initMail();
     initFilter();
+    initSearch();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
