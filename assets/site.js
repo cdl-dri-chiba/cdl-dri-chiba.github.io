@@ -3,6 +3,7 @@
  * 2. mobile menu drawer
  * 3. show/hide toggles (Publications)
  * 4. spam-safe mail link
+ * 5. Activities category filter
  */
 (function () {
   'use strict';
@@ -146,11 +147,50 @@
     }
   }
 
+  // ---- 5. Activities category filter ---------------------------------------
+  function initFilter() {
+    var chips = document.querySelectorAll('[data-filter]');
+    if (!chips.length) return;
+    var rows = document.querySelectorAll('[data-cat]');
+    var groups = document.querySelectorAll('.act-year');
+    var empty = document.getElementById('act-empty');
+    var known = {};
+    for (var i = 0; i < chips.length; i++) known[chips[i].getAttribute('data-filter')] = true;
+
+    function apply(cat, push) {
+      for (var i = 0; i < chips.length; i++) {
+        var on = chips[i].getAttribute('data-filter') === cat;
+        chips[i].classList.toggle('fl-on', on);
+        chips[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+      for (var j = 0; j < rows.length; j++) {
+        var show = cat === 'all' || rows[j].getAttribute('data-cat') === cat;
+        rows[j].classList.toggle('act-hide', !show);
+      }
+      var total = 0;
+      for (var g = 0; g < groups.length; g++) {
+        var n = groups[g].querySelectorAll('[data-cat]:not(.act-hide)').length;
+        groups[g].classList.toggle('act-hide', n === 0);
+        total += n;
+      }
+      if (empty) empty.classList.toggle('act-hide', total !== 0);
+      if (push && window.history && history.replaceState) {
+        history.replaceState(null, '', cat === 'all' ? location.pathname + location.search : '#' + cat);
+      }
+    }
+    for (var c = 0; c < chips.length; c++) {
+      chips[c].addEventListener('click', function () { apply(this.getAttribute('data-filter'), true); });
+    }
+    var h = (location.hash || '').replace('#', '').toLowerCase();
+    apply(known[h] ? h : 'all', false);
+  }
+
   function init() {
     initCurve();
     initMenu();
     initToggles();
     initMail();
+    initFilter();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
