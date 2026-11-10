@@ -3,7 +3,7 @@
  * 2. mobile menu drawer
  * 3. show/hide toggles (Publications)
  * 4. spam-safe mail link
- * 5. Activities category filter
+ * 5. Activities / Projects category filter
  * 6. Publications search
  */
 (function () {
@@ -148,7 +148,7 @@
     }
   }
 
-  // ---- 5. Activities category filter ---------------------------------------
+  // ---- 5. Activities / Projects category filter ---------------------------------------
   function initFilter() {
     var chips = document.querySelectorAll('[data-filter]');
     if (!chips.length) return;
@@ -165,14 +165,14 @@
         chips[i].setAttribute('aria-pressed', on ? 'true' : 'false');
       }
       for (var j = 0; j < rows.length; j++) {
-        var show = cat === 'all' || rows[j].getAttribute('data-cat') === cat;
+        var show = cat === 'all' || (' ' + rows[j].getAttribute('data-cat') + ' ').indexOf(' ' + cat + ' ') !== -1;
         rows[j].classList.toggle('act-hide', !show);
       }
       var total = 0;
+      for (var k = 0; k < rows.length; k++) { if (!rows[k].classList.contains('act-hide')) total++; }
       for (var g = 0; g < groups.length; g++) {
         var n = groups[g].querySelectorAll('[data-cat]:not(.act-hide)').length;
         groups[g].classList.toggle('act-hide', n === 0);
-        total += n;
       }
       if (empty) empty.classList.toggle('act-hide', total !== 0);
       if (push && window.history && history.replaceState) {
